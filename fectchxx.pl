@@ -25,20 +25,20 @@ my %info = parse_items($html);
 
 my $img_dir = encode('gbk', '图片');
 if (not -e $img_dir) {
-    mkdir($img_dir) or die "Failed to mkdir $img_dir";
+   mkdir($img_dir) or die "Failed to mkdir $img_dir";
 }
 
 # remove those unfinished images 
 $SIG{INT} = sub {
-    chdir(encode('gbk', '图片'));
-    my @dirs = glob "*";
-    find(\&wanted, @dirs);
+   chdir(encode('gbk', '图片'));
+   my @dirs = glob "*";
+   find(\&wanted, @dirs);
 
-    exit(0);
+   exit(0);
 };
 
 sub wanted {
-    m/.*-.*/i && unlink($_);
+   m/.*-.*/i && unlink($_);
 }
 
 chdir(encode('gbk', '图片')) or die "Failed to changedir to imgs";
@@ -51,10 +51,10 @@ while (my ($link, $name) = each %info) {
 
    # Looping to get all the links for the item
    if ($index > 1) {
-       for(my $i=2; $i <= $index; ++$i) {
-            my $next  = $base . $link . "index$i" . ".html";
-            $content .= grab_html($next);
-      }
+     for(my $i=2; $i <= $index; ++$i) {
+       my $next  = $base . $link . "index$i" . ".html";
+       $content .= grab_html($next);
+    }
    }
 
    my @links = parse_img_links($content);
@@ -66,23 +66,23 @@ while (my ($link, $name) = each %info) {
    my $flg = 0;
 
    foreach (@links) {
-        $url = encode('utf-8', $_);
-        $ff  = File::Fetch->new(uri => $url);
-        $thr = async {
-                RETRY:
-                eval { 
-                    $ff->fetch(to => $to_dir); 
-                };
-                if ($@) {
-                    goto RETRY;
-                }
-            };
-        $thr->detach();
-        ++$flg;
+     $url = encode('utf-8', $_);
+     $ff  = File::Fetch->new(uri => $url);
+     $thr = async {
+         RETRY:
+         eval { 
+            $ff->fetch(to => $to_dir); 
+         };
+         if ($@) {
+            goto RETRY;
+         }
+       };
+     $thr->detach();
+     ++$flg;
 
-        # To avoid agressive spawning thread which consuming too much resources
-        # You could comment this line if you are with a powerfull machine
-        sleep(rand(8));
+     # To avoid aggressive spawning thread which consuming too much resources
+     # You could comment this line if you are with a powerful machine
+     sleep(rand(8));
    }
    print "$to_dir : $flg \n";
 }
@@ -102,26 +102,25 @@ sub grab_html_by_limit {
 
    # Set a default limit for grabbing html
    if (not defined($limit)) {
-       $limit = 10;
+     $limit = 10;
    }
 
    # Get start page
    if ($url !~ /http.*index.*(\d+)\.html/) {
-       $url .= "/index1.html";
+     $url .= "/index1.html";
    }
    my $curr_page   = basename($url);
    my $base_link   = dirname($url);
    my $start_index = ($curr_page =~ /index(\d+)\.html/) ? $1 : 1;
    my $html        = grab_html($url);
    my $last_index  = get_last_index($html);
-
    $last_index     = ($start_index + $limit  < $last_index) ?
                      ($start_index + $limit) : $last_index;
 
    while ($start_index < $last_index) {
-       ++ $start_index;
-       $url   = $base_link . "/" . "index$start_index" . ".html";
-       $html .= grab_html($url);
+      ++ $start_index;
+      $url   = $base_link . "/" . "index$start_index" . ".html";
+      $html .= grab_html($url);
    }
 
    return $html;
@@ -130,7 +129,7 @@ sub grab_html_by_limit {
 sub get_last_index {
    my $content = shift;
    if ($content =~ /尾(\d+)页/ig) {
-      return $1;
+    return $1;
    }
 }
 
@@ -141,16 +140,16 @@ sub parse_items {
 
 # split the items out of the raw content
    LOOP:
-    if ($html =~ /<a href="(.*)" target="_blank" title="(.*)"/) {
-        my $name  = $1;
-        my $title = $2;
+   if ($html =~ /<a href="(.*)" target="_blank" title="(.*)"/) {
+      my $name  = $1;
+      my $title = $2;
 
-        $info{$name} = $title;
-        $html = $';
-        if (defined $html) {
-            goto LOOP;
-        }
-    }
+      $info{$name} = $title;
+      $html = $';
+      if (defined $html) {
+         goto LOOP;
+      }
+   }
 
    return %info;
 }
