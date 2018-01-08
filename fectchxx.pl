@@ -24,14 +24,16 @@ $SIG{INT} = sub {
    chdir(encode('gbk', '图片'));
    my @dirs = glob "*";
    find(\&wanted, @dirs);
+   finddepth(sub{rmdir},'.');
 
    exit(0);
 };
 
 # Remove those incompleted and blank ones
 sub wanted {
-   m/.*-.*/i && unlink($_);
-   #m/.*\.jpg/i && (-s $_) == 0 && unlink($_);
+   m/.*\.jpg-.*/i && unlink($_);
+   m/.*\.php/i && unlink($_);
+   m/.*\.jpg/i && -z && unlink($_);
 }
 
 my $base = "http://xxgege.net";
@@ -118,7 +120,7 @@ while (my ($link, $name) = each %info) {
 
       # To avoid aggressive spawning thread which consuming too much resources
       # You could comment this line if you are with a powerful machine
-      sleep(int rand(20));
+      sleep(int rand(10));
    }
    print "$to_dir : $flg \n";
 }
@@ -130,7 +132,8 @@ sub help {
    print encode('gbk',"
    $0 - 抓取脚本, 你懂的 
    本脚本主要用于抓取图片，网站 http://xxgege.net
-   用法：
+   可以使用 Control + c 来停止脚本
+   选项：
       -art [artyz artzp artjq artkt artwm artmt artyd]
       -rand 随机抓取
       -help 帮助文档
@@ -143,6 +146,11 @@ sub help {
       artwm - 唯美
       artmt - 美腿
       artyd - 银荡
+   
+   例子：
+      perl $0 -art artzp -rand
+      perl $0 -rand
+      perl $0
    ");
    exit;
 }
@@ -191,7 +199,7 @@ sub grab_html_by_rand {
    return $html;
 }
 
-# Grab the html recursively
+# Grab the html in a loop
 sub grab_html_by_sque {
    my $url   = shift;
    my $limit = shift;
