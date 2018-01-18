@@ -1,13 +1,16 @@
 # Crab imges from site xxgege.net/
 # This is a study project, just for fun.
 # Date: 2018/1/3
+# Last Modified: 2018/1/18
 # Author: Kyle Li
 
 use strict;
 use warnings;
 
+use lib './lib';
 use Cwd;
 use Data::Dumper;
+use Digest::MD5;
 use Encode;
 use File::Basename;
 use File::Find;
@@ -18,9 +21,21 @@ use HTTP::Tiny;
 use threads;
 use utf8;
 
+use Md5Hash;
+
+my %imgdb;
+
 # Defined the clean sub while control + C was called to stop the 
 # script
 $SIG{INT} = sub {
+   untie %imgdb;
+   tie %imgdb, 'Md5Hash', 'db/imgdb.yml';
+   foreach (keys %imgdb) {
+      if (not -e encode('gbk', $imgdb{$_})) {
+         delete $imgdb{$_};
+      }
+   }
+
    chdir(encode('gbk', '图片'));
    my @dirs = glob "*";
    find(\&wanted, @dirs);
@@ -36,6 +51,14 @@ sub wanted {
    m/.*\.jpg/i && -z && unlink($_);
 }
 
+# Tie the md5 to local disk file
+if (not -d 'db/') {
+   mkdir('db');
+}
+tie %imgdb, 'Md5Hash', 'db/imgdb.yml' 
+or die "Failed to tie file to Md5Hash"; 
+
+
 my $base = "http://xxgege.net";
 my @arts = qw/artyz artzp artjq artkt artwm artmt artyd/;
 
@@ -45,11 +68,13 @@ my $url;
 my $help;
 my $rand;
 my $art;
+my $page;
 
 my %options = (
-   'help' => \$help,
-   'rand' => \$rand,
-   'art=s'=> \$art
+   'help'   => \$help,
+   'rand'   => \$rand,
+   'art=s'  => \$art,
+   'page=i' => \$page
 );
 
 GetOptions(%options);
@@ -66,11 +91,15 @@ if (not defined($art) or not grep {$_ eq $art} @arts) {
 
 $url  = $base . '/' . $art;
 
+if (not defined($page)) {
+   $page = 3;
+}
+
 if (defined($rand)) {
-   $html = grab_html_by_rand($url, 3);
+   $html = grab_html_by_rand($url, $page);
 }
 else {
-   $html = grab_html_by_sque($url, 3);
+   $html = grab_html_by_sque($url, $page);
 }
 
 my %info    = parse_items($html);
@@ -98,31 +127,45 @@ while (my ($link, $name) = each %info) {
    my @links = parse_img_links($content);
    my $ff;
    my $thr;
-   my $img_name;
+   my $img_file;
    my @imgs;
    my $url;
-   my $flg = 0;
+   my $md5;
 
    foreach (@links) {
-      $url = encode('utf-8', $_);
-      $ff  = File::Fetch->new(uri => $url);
-      $thr = async {
+      $url      = encode('utf-8', $_);
+      $ff       = File::Fetch->new(uri => $url);
+      $img_file = $to_dir . '/' . $ff->file;
+      $thr      = async {
+         my $flag = 0;
          RETRY:
             eval { 
                $ff->fetch(to => $to_dir); 
             };
-            if ($@) {
+
+            # Try 3 times if fetch failed
+            if ($@ and $flag < 3) {
+               $flag ++;
                goto RETRY;
+            }
+
+            if (-e $img_file) {
+               $md5 = get_md5($img_file);
+               if (exists $imgdb{$md5}) {
+                  unlink($img_file);
+               }  
+               else {
+                  $imgdb{$md5} = decode('gbk', $img_file);
+               }
             }
        };
       $thr->detach();
-      ++$flg;
 
       # To avoid aggressive spawning thread which consuming too much resources
       # You could comment this line if you are with a powerful machine
       sleep(int rand(10));
    }
-   print "$to_dir : $flg \n";
+   print "$to_dir\n";
 }
 
 #================================================
@@ -136,6 +179,7 @@ sub help {
    选项：
       -art [artyz artzp artjq artkt artwm artmt artyd]
       -rand 随机抓取
+      -page 抓取页数，默认为3页
       -help 帮助文档
    
    内容映射：
@@ -148,7 +192,7 @@ sub help {
       artyd - 银荡
    
    例子：
-      perl $0 -art artzp -rand
+      perl $0 -art artzp -rand -page 5
       perl $0 -rand
       perl $0
    ");
@@ -271,4 +315,18 @@ sub parse_img_links {
    @links = grep {/^http.*jpg$/} @links;
 
    return @links;
+}
+
+# get md5 of image
+sub get_md5 {
+   my $img = shift;
+   my $ctx = Digest::MD5->new();
+   my $file_handle;
+   
+   open($file_handle, '<', $img) or
+   die "Failed to open $img";
+   $ctx->addfile($file_handle);
+   close($file_handle);
+
+   return $ctx->hexdigest;
 }
