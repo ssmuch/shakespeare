@@ -1,31 +1,30 @@
 
-   fectchxx.pl - ץȡ�ű�, �㶮�� 
-   ���ű���Ҫ����ץȡͼƬ����վ http://xxgege.net, �������ö���߳���ץȡ�����ؽ���
-   md5�����⣬����ȥ���ظ�ͼƬ�������޷��ڷ������˻�ȡmd5ֵ��Ŀǰ��ȡ���ص�����Ȼ����
-   ���ؿ��ڱ��������Ƿ��Ѵ��ڣ����ǣ���ɾ��֮��
+   fectchxx.pl - 抓取脚本, 你懂的
+   本脚本主要用于抓取图片，网站 http://xxgege.net, 本程序用多个线程来抓取，本地建立
+   md5样本库，用于去掉重复图片，由于无法在服务器端获取md5值，目前采取下载到本地然后在
+   本地库内遍历，看是否已存在，若是，即删除之。
 
-   ����ʹ�� Control + c ��ֹͣ�ű�
-   ѡ�
+   可以使用 Control + c 来停止脚本
+   选项：
       -art [artyz artzp artjq artkt artwm artmt artyd]
-      -rand ���ץȡ
-      -page ץȡҳ����Ĭ��Ϊ3ҳ
-      -freq ץȡƵ��, ����һ���������Ĭ������0-3��, ��������
-      -mode �߳�ģʽ��[detach|join], 
-            detach : �����Ĵ���������ץȡ�̵߳�����, �����ϻ���
-            join   : ��ȴ������մ����������߳�, ����������
-      -help �����ĵ�
-   
-   ����ӳ�䣺
-      artyz - ����
-      artzp - ����
-      artjq - ����
-      artkt - ��ͨ
-      artwm - Ψ��
-      artmt - ����
-      artyd - ����
-   
-   ���ӣ�
+      -rand 随机抓取
+      -page 抓取页数，默认为3页
+      -freq 抓取频率, 这是一个随机数，默认区间0-3秒, 输入数字
+      -mode 线程模式，[detach|join],
+            detach : 不关心创建出来的抓取线程的死活, 理论上会快点
+            join   : 会等待并回收创建出来的线程, 理论上慢点
+      -help 帮助文档
+
+   内容映射：
+      artyz - 艳照
+      artzp - 自拍
+      artjq - 激情
+      artkt - 卡通
+      artwm - 唯美
+      artmt - 美腿
+      artyd - 银荡
+
+   例子：
       perl fectchxx.pl -art artzp -rand -page 5 -freq 1
       perl fectchxx.pl -rand -mod detach
       perl fectchxx.pl
-   
