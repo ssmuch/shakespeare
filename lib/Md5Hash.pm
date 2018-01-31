@@ -1,10 +1,15 @@
 package Md5Hash;
 require Tie::Hash;
 
+use strict;
+use warnings;
+
+use Encode;
 use YAML::Tiny;
+use Data::Dumper;
 use File::Slurp qw(read_file write_file);
 
-@ISA = qw(Tie::StdHash);
+my @ISA = qw(Tie::StdHash);
 our $file = 'test.yml';
 
 sub TIEHASH {
@@ -70,4 +75,35 @@ sub DELETE {
       return undef;
    }
 }
+
+sub EXISTS {
+   my $self = shift;
+   my $key  = shift;
+
+   return exists $self->{$key};
+}
+
+sub FIRSTKEY {
+   my $self = shift;
+   my @keys = keys %{$self};
+
+   return $keys[0];
+}
+
+sub NEXTKEY {
+   each %{$_[0]} 
+}
+
+# sub DESTROY {
+#    my $yaml_ref = YAML::Tiny->read($file);
+
+#    foreach (keys %{$yaml_ref->[0]}) {
+#       if (not -e encode('gbk', $yaml_ref->[0]->{$_})) {
+#          print "deling $_\n";
+#          delete $yaml_ref->[0]->{$_};
+#       }
+#    }
+#    $yaml_ref->write($file);
+# }
+
 1;

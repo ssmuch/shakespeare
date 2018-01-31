@@ -2,6 +2,11 @@ use strict;
 use warnings;
 use Data::Dumper;
 
+my %test = (
+  'k1' => 'v1',
+  'k2' => 'v1'
+);
+
 # Fork play
 # my $child = fork();
 
