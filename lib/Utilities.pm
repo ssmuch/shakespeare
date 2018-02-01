@@ -142,4 +142,27 @@ sub get_md5_by_file {
 
    return $ctx->hexdigest;
 }
+
+# Locate the dups
+sub locate_dups {
+   my $db_ref = shift;
+
+   my @dups;
+   my $dup_ref = {};
+
+   foreach (keys %{$db_ref}) {
+      push @{$dup_ref->{$db_ref->{$_}}}, $_;
+   }
+
+   foreach (keys %{$dup_ref}) {
+      if (scalar @{$dup_ref->{$_}} >= 2) {
+         pop @{$dup_ref->{$_}};
+
+         push @dups, @{$dup_ref->{$_}};
+      }
+   }
+
+   return map {$_ => 1} @dups;
+}
+
 1;

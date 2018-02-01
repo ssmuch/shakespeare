@@ -1,6 +1,5 @@
 use lib './lib';
 
-use Data::Dumper;
 use Encode;
 use File::Find;
 use File::Slurp qw(read_file write_file);
@@ -22,9 +21,8 @@ my %imgdb;
 
 # Perform dedupe while receving terminated sig
 # and perform the clean job
-
 $SIG{INT} = sub {
-   my %dups = locate_dups($yaml_ref->[0]);
+   my %dups = Utilities::locate_dups($yaml_ref->[0]);
    tie %imgdb,  'Md5Hash', 'db/imgdb.yml';
 
    foreach (keys %imgdb) {
@@ -41,8 +39,6 @@ $SIG{INT} = sub {
 
    $yaml_ref->write($md5_db_file);
 
-   print "\n dedupe and clean completed\n";
-
    exit;
 };
 
@@ -54,13 +50,16 @@ sub wanted {
 
 my $file;
 my $md5_f;
+my %reversed_db = reverse %{yaml_ref->[0]};
 
-# Build the md5db
+# Build the md5db every 60 s
 while (1) {
    untie %imgdb;
    tie %imgdb,  'Md5Hash', 'db/imgdb.yml';
    foreach (keys %imgdb) {
       $file  = encode('gbk', $imgdb{$_});
+
+      next if (exists $reversed_db{$_});
 
       if (-e $file) {
          $md5_f = Utilities::get_md5_by_file($file);
@@ -71,25 +70,4 @@ while (1) {
       }
    }
    sleep 60;
-}
-
-sub locate_dups {
-   my $db_ref = shift;
-
-   my @dups;
-   my $dup_ref = {};
-
-   foreach (keys %{$db_ref}) {
-      push @{$dup_ref->{$db_ref->{$_}}}, $_;
-   }
-
-   foreach (keys %{$dup_ref}) {
-      if (scalar @{$dup_ref->{$_}} >= 2) {
-         pop @{$dup_ref->{$_}};
-
-         push @dups, @{$dup_ref->{$_}};
-      }
-   }
-
-   return map {$_ => 1} @dups;
 }
