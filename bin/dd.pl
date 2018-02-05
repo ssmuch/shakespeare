@@ -50,12 +50,13 @@ sub wanted {
 
 my $file;
 my $md5_f;
-my %reversed_db = reverse %{yaml_ref->[0]};
 
 # Build the md5db every 60 s
 while (1) {
    untie %imgdb;
    tie %imgdb,  'Md5Hash', 'db/imgdb.yml';
+   my %reversed_db = reverse %{yaml_ref->[0]};
+
    foreach (keys %imgdb) {
       $file  = encode('gbk', $imgdb{$_});
 
