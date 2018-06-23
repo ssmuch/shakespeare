@@ -55,6 +55,7 @@ my $md5_f;
 while (1) {
    untie %imgdb;
    tie %imgdb,  'Md5Hash', 'db/imgdb.yml';
+   $yaml_ref = YAML::Tiny->read($md5_db_file);
    my %reversed_db = reverse %{yaml_ref->[0]};
 
    foreach (keys %imgdb) {

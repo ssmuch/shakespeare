@@ -114,11 +114,11 @@ sub parse_img_links {
    my @links;
 
    # Split the img links for download
-   @links = split(/src=/, encode('gbk', $html));
+   @links = split(/src="/, encode('gbk', $html));
 
    @links = grep {/upload|image|img|sezuzu/} @links;
-   @links = map  {$_ =~ s/.*(http.*jpg).*/$1/g;  $_;} @links;
-   @links = grep {/^http.*jpg$/} @links;
+   @links = map  {$_ =~ s/(.*jpg).*/$1/g;  $_;} @links;
+   @links = grep {/^.*jpg$/} @links;
 
    return @links;
 }

@@ -73,7 +73,7 @@ if (not defined($page)) {
 }
 
 if (not defined($freq)) {
-   $freq = 3;
+   $freq = 10;
 }
 
 if (not defined($mode) or
@@ -95,6 +95,7 @@ if (not -e $img_dir) {
    mkdir($img_dir) or die "Failed to mkdir $img_dir";
 }
 
+#print Dumper \%info;
 # Main loop for crawling the target
 while (my ($link, $name) = each %info) {
    # Get the last index of the item page
@@ -111,6 +112,7 @@ while (my ($link, $name) = each %info) {
    }
 
    my @links = Utilities::parse_img_links($content);
+   #print Dumper \@links;
    my $ff;
    my $thr;
    my $img_file;
@@ -124,17 +126,23 @@ while (my ($link, $name) = each %info) {
 
    foreach (@links) {
       $url      = encode('utf-8', $_);
+
+      if ($url !~ /^http/i) {
+            $url = "http:" . $url;
+      }
+
       $ff       = File::Fetch->new(uri => $url);
       $img_file = $to_dir . '/' . $ff->file;
       $md5      = Utilities::get_md5_by_name($img_file);
+      #print $url . "\n";
 
       # if md5 existed
       if (exists $imgdb{$md5}) {
-	      next;
+	   next;
       }
-		else {
+	else {
          $imgdb{$md5} = decode('gbk', $img_file);
-		}
+	}
 
       $thr = async {
          my $flag = 0;
