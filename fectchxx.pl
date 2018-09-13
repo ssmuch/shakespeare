@@ -32,7 +32,7 @@ if (not -d 'db/') {
    mkdir('db');
 }
 
-my $base = "http://xxgege.net";
+my $base = "https://xxgege.net";
 my @arts = qw/artyz artzp artjq artkt artwm artmt artyd/;
 
 my $html;
@@ -89,6 +89,7 @@ else {
 }
 
 my %info    = Utilities::parse_items($html);
+
 my $img_dir = encode('gbk', '图片');
 
 if (not -e $img_dir) {
