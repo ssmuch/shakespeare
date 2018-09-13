@@ -23,7 +23,7 @@ my $stmt_cate = qq /
 my $stmt_subj = qq /
     CREATE TABLE IF NOT EXISTS t_subject (
         F_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        F_name TEXT, 
+        F_name TEXT UNIQUE, 
         F_title TEXT,
         F_url TEXT, 
         F_category_id INT NOT NULL,

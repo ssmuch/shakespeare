@@ -40,7 +40,7 @@ sub grab_html_by_rand {
       $limit = 10;
    }
 
-   my $html = grab_html($url);
+   my $html = grab_html_href($url);
    my $last = get_last_index($html);
    my $i    = 0;
 
@@ -60,7 +60,7 @@ sub grab_html_by_rand {
 
    foreach (keys %rands) {
       my $link = $url . "/index" . $_ . ".html";
-      $html   .= grab_html($link);
+      $html   .= grab_html_href($link);
    }
 
    return $html;
@@ -84,7 +84,7 @@ sub grab_html_by_sque {
    my $curr_page   = basename($url);
    my $base_link   = dirname($url);
    my $start_index = ($curr_page =~ /index(\d+)\.html/) ? $1 : 1;
-   my $html        = grab_html($url);
+   my $html        = grab_html_href($url);
    my $last_index  = get_last_index($html);
    $last_index     = ($start_index + $limit  < $last_index) ?
                      ($start_index + $limit) : $last_index;
@@ -92,7 +92,7 @@ sub grab_html_by_sque {
    while ($start_index < $last_index) {
       ++ $start_index;
       $url   = $base_link . "/" . "index$start_index" . ".html";
-      $html .= grab_html($url);
+      $html .= grab_html_href($url);
    }
 
    return $html;

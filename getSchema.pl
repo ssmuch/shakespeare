@@ -24,8 +24,8 @@ my $base = "https://xxgege.net";
 #my @arts = qw/artyz artzp artkt artjq artkt artwm artmt artyd/;
 
 my %map = (
-   "artyz" => "测试",
-   "artzp" => "图片",
+   "artyz" => "艳照",
+   "artzp" => "自拍",
 );
 my @arts = keys(%map);
 
@@ -49,21 +49,22 @@ foreach my $art (@arts) {
       next if $link =~ /(google|baidu|\.xml)/;
       my $now       = time();
       my $subj_name = basename($link);
-      my $subj_id   = get_subj_id($subj_name);
+      my $title     = decode('utf-8',$name);
       my $subj_sql  = 
             "insert into t_subject (F_name, F_url, F_title, F_category_id, F_state, " . 
-            "F_created_at, F_updated_at) values ($subj_name, $link, $name, $category_id, 0, $now, $now);";
-
+            "F_created_at, F_updated_at) values ('$subj_name', '$link', '$title', $category_id, 0, $now, $now);";
+      
       DbUtil::execute($dbh, $subj_sql);
 
-      my @links = grab_links($base, $link);
+      my @links     = grab_links($base, $link);
+      my $subj_id   = get_subj_id($subj_name);
 
       foreach my $link (@links) {
          $now = time();
          my $img_name = basename($link);
          my $img_sql  = 
                "insert into t_image (F_name, F_url, F_subject_id, F_category_id, F_created_at, " .
-               "F_updated_at) values ($img_name, $link, $subj_id, $category_id, $now, $now);";
+               "F_updated_at) values ('$img_name', '$link', $subj_id, $category_id, $now, $now);";
 
          DbUtil::execute($dbh, $img_sql);
       }
@@ -85,7 +86,7 @@ sub init_category {
 
 sub get_subj_id {
    my $subj = shift;
-   my $sql  = "select F_id from t_category where F_name='$subj'";
+   my $sql  = "select F_id from t_subject where F_name='$subj';";
 
    my @row = DbUtil::query($dbh, $sql);
    if ((scalar @row) > 0) {
@@ -111,7 +112,7 @@ sub grab_links{
    my $base = shift;
    my $link = shift;
    print "geting html: " . $link ."\n";
-   my $content = Utilities::grab_html($base . $link);
+   my $content = Utilities::grab_html_href($base . $link);
    my $index   = Utilities::get_last_index($content);
 
    # Looping to get all the links for the item
