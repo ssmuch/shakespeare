@@ -3,6 +3,7 @@ package Utilities;
 use Digest::MD5;
 use Encode;
 use File::Basename;
+use HTTP::Tiny;
 use utf8;
 
 sub grab_html {
@@ -11,6 +12,22 @@ sub grab_html {
 
    # Decoding the charset
    return decode('utf-8', $r->{content});
+}
+
+sub grab_html_href {
+   my $url = shift;
+   my $r   = HTTP::Tiny->new->get($url);
+   my $html;
+   # Decoding the charset
+   my @lines  = split(/\n/, $r->{content});
+   foreach my $line (@lines) {
+       chomp($line);
+
+       next if $line !~ /src|href/i;
+       $html .= $line . "\n";
+   }
+
+   return $html;
 }
 
 # Grab page by_rand
