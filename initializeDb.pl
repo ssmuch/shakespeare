@@ -3,20 +3,17 @@
 # Date: 2018/1/3
 # Last Modified: 2018/1/31
 # Author: Kyle Li
-use lib './lib';
-
-use DBI;
 use strict;
-use MIME::Base64;
-use Data::Dumper;
-use DbUtil;
 
-my $dbh = DbUtil::connectDb();
+use lib './lib';
+use DbUtil;
+use DBI;
 
 my $stmt_cate = qq /
     CREATE TABLE IF NOT EXISTS t_category (
         F_id INTEGER PRIMARY KEY AUTOINCREMENT,
         F_name TEXT, 
+        F_title TEXT,
         F_url TEXT, 
         F_state INT,
         F_created_at INT, 
@@ -27,6 +24,7 @@ my $stmt_subj = qq /
     CREATE TABLE IF NOT EXISTS t_subject (
         F_id INTEGER PRIMARY KEY AUTOINCREMENT,
         F_name TEXT, 
+        F_title TEXT,
         F_url TEXT, 
         F_category_id INT NOT NULL,
         F_state INT,
@@ -59,14 +57,16 @@ my $index_subj = "create index if not exists subIndex on t_subject(F_category_id
 my $rv;
 my $flag = 1;
 my @stmts = ($stmt_cate, $stmt_img, $stmt_subj, $index_img, $index_subj);
+my $dbh = DbUtil::connectDb();
 
 foreach my $stmt (@stmts) {
-      $rv = $dbh->do($stmt);
-      if ($rv < 0) {
-            $flag = 0;
-            print "DB initialization failed\n";
-            print $DBI::errstr;
-      }
+    $rv = DbUtil::execute($dbh, $stmt);
+
+    if ($rv < 0) {
+        $flag = 0;
+        print "DB initialization failed\n";
+        print $DBI::errstr;
+    }
 }
 
 if ($flag) {

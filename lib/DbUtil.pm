@@ -39,7 +39,9 @@ sub execute {
 
    if ($rv < 0) {
       print "Failed to execute: $sql\n";
+      return 1;
    }
+   return 0;
 }
 
 sub closeDb {
