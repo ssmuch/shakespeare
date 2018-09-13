@@ -73,7 +73,8 @@ sub grab_html_by_sque {
 
    # Set a default limit for grabbing html
    if (not defined($limit)) {
-      $limit = 10;
+      #$limit = 10;
+      $limit = get_last_index(grab_html_href($url));
    }
 
    # Get start page
