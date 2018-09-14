@@ -30,7 +30,12 @@ sub query {
    }
 
    while(my @result = $sth->fetchrow_array()) {
-      push(@rows, $result[0]);
+      if ((scalar @result) == 1) {
+         push(@rows, $result[0]);
+      }
+      else {
+         push(@rows, @result);
+      }
    }
    return @rows;
 }

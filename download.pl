@@ -1,23 +1,23 @@
 use lib './lib';
+
 use Utilities;
+use Operation;
+use DbUtil;
 use Encode;
-use Data::Dumper;
-use LWP::Simple;
-use MIME::Base64;
 
+#   1. query image_id and link from t_image, 
+#   2. get content, 
+#   3. base64 encoded, 
+#   4. insert into t_download
+#   5. store to local?
+#
+# Notice: control frequency to avoid robot detection
 
-# Store img
-$url      = "https://b-ssl.duitang.com/uploads/item/201406/18/20140618194053_Rzh8H.jpeg";
-$content  = get($url);
-$endcoded = encode_base64($content);
+my $dbh  = DbUtil::connectDb();
+my $query_sql = "select F_id, F_url from t_image;";
 
+my @rows = DbUtil::query($dbh, $query_sql);
 
-# Update t_image column with record
-#update t_image set F_content= '$endcoded' where F_name='';
-
-# decode jpg content
-$new = decode_base64($endcoded);
-open(FH, '>', 'test.jpg');
-binmode(FH);
-print FH $new;
-close FH;
+foreach $row_ref (@rows) {
+    store($dbh, $row_ref);
+}

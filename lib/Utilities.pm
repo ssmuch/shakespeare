@@ -63,7 +63,7 @@ sub grab_html_by_rand {
       $html   .= grab_html_href($link);
    }
 
-   return $html;
+   return decode('utf-8', $html);
 }
 
 # Grab the html in a loop
