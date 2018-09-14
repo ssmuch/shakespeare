@@ -4,6 +4,7 @@ use Utilities;
 use Operation;
 use DbUtil;
 use Encode;
+use Data::Dumper;
 
 #   1. query image_id and link from t_image, 
 #   2. get content, 
@@ -19,5 +20,5 @@ my $query_sql = "select F_id, F_url from t_image;";
 my @rows = DbUtil::query($dbh, $query_sql);
 
 foreach $row_ref (@rows) {
-    store($dbh, $row_ref);
+    Operation::write_db($dbh, $row_ref);
 }

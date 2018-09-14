@@ -9,17 +9,17 @@ use MIME::Base64;
 #print Utilities::get_last_index(Utilities::get_html_href($url));
 
 # Store img
-$url      = "https://b-ssl.duitang.com/uploads/item/201406/18/20140618194053_Rzh8H.jpeg";
-$content  = get($url);
-$endcoded = encode_base64($content);
-
-
-# Update t_image column with record
-update t_image set F_content= '$endcoded' where F_name='';
+$url      = "http://p226.sezuzu.com/attachment/1703/thread/60_176891_8ce2adde7b815ec.jpg";
+$ff      = File::Fetch->new(uri => $url);
+$ff->fetch();
+#$content  = get($url);
+#print $content . "\n";
+#$endcoded = encode_base64($content);
+#update t_image set F_content= '$endcoded' where F_name='';
 
 # decode jpg content
-$new = decode_base64($endcoded);
-open(FH, '>', 'test.jpg');
-binmode(FH);
-print FH $new;
-close FH;
+#$new = decode_base64($endcoded);
+#open(FH, '>', 'test.jpg');
+#binmode(FH);
+#print FH $content;
+#close FH;

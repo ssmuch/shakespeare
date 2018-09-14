@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use LWP::Simple;
 use MIME::Base64;
+use Data::Dumper;
 
 use lib './lib';
 
@@ -206,11 +207,12 @@ sub grab_links{
    return Utilities::parse_img_links($content);
 }
 
-sub store_img {
+# not work, use fetch instead
+sub write_db {
     my $dbh = shift;
     my $ref = shift;
     my $image_id = $ref->[0];
-    my $content  = get($ref->[1]);
+    my $content  = get("http:" . $ref->[1]);
 
     if (not defined $content) {
         print "Failed to get the image: " . $ref->[1] . "\n";

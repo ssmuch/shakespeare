@@ -34,7 +34,7 @@ sub query {
          push(@rows, $result[0]);
       }
       else {
-         push(@rows, @result);
+         push(@rows, \@result);
       }
    }
    return @rows;
