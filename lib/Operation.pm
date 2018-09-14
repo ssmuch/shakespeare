@@ -4,6 +4,7 @@ use warnings;
 use LWP::Simple;
 use MIME::Base64;
 use Data::Dumper;
+use File::Fetch;
 
 use lib './lib';
 
@@ -111,8 +112,7 @@ sub init_category {
       my $now = time();
       my $init_category_sql = 
             "insert into t_category (F_name, F_url, F_title, F_state, F_created_at, F_updated_at) ".
-            "values('$art', '/$art/', '$MAP{$art}', 0, $now, $now);";
-
+            "values('$art', '$BASE/$art/', '$MAP{$art}', 0, $now, $now);"; 
       DbUtil::execute($dbh, $init_category_sql);
    }
 }
@@ -132,7 +132,7 @@ sub init_subject {
          next if $link =~ /(google|baidu|\.xml)/ or get_subj_id($dbh, $subj_name);
 
          my $now       = time();
-         my $title     = decode('utf-8',$name);
+         my $title     = $name;
          my $subj_sql  = 
             "insert into t_subject (F_name, F_url, F_title, F_category_id, F_state, " . 
             "F_created_at, F_updated_at) values ('$subj_name', '$BASE$link', '$title', $category_id, 0, $now, $now);";
@@ -149,14 +149,15 @@ sub init_image {
    foreach my $subj_ref (@arts) {
        my $subj_id     = $subj_ref->[0];
        my $category_id = $subj_ref->[1];
-       my @links       = grab_links($subj_ref->[3]);
+       my @links       = grab_links($subj_ref->[2]);
 
        foreach my $link (@links) {
-           my $now = time();
+           my $now      = time();
            my $img_name = basename($link);
+           my $img_url  = "http:" . $link;
            my $img_sql  = 
               "insert into t_image (F_name, F_url, F_subject_id, F_category_id, F_created_at, " .
-              "F_updated_at) values ('$img_name', '$link', $subj_id, $category_id, $now, $now);";
+              "F_updated_at) values ('$img_name', '$img_url', $subj_id, $category_id, $now, $now);";
 
            DbUtil::execute($dbh, $img_sql);
        }
@@ -191,7 +192,6 @@ sub get_category_id {
 
 sub grab_links{
    my $link = shift;
-   print "geting html: " . $link ."\n";
    my $content = Utilities::grab_html_href($link);
    my $index   = Utilities::get_last_index($content);
 
@@ -238,6 +238,49 @@ sub write_disk {
     binmode(FH);
     print FH $content;
     close FH;
+}
+
+sub fetch_img {
+    my $dbh = shift;
+    my $ref = shift;
+    my $image_id    = $ref->[0];
+    my $ff          = File::Fetch->new(uri => $ref->[1]);
+    my $retry       = 0;
+    my $retry_limit = 3;
+    my $to_dir      = "images/$image_id";
+    my $image_file  = $to_dir . basename($ref->[1]);
+
+FETCH:
+    eval {
+        $ff->fetch(to => $to_dir);
+    };
+
+    if ($@) {
+        if ($retry < $retry_limit) {
+            $retry ++;
+            go FETCH;
+        }
+        else {
+            print "Failed to retrieve img from: [" . $ref->[1] . "], $@\n";
+        }
+    }
+    else {
+        open(FH, '<', $image_file) or die "Failed to open file: $image_file\n";
+        binmode(FH);
+
+        my $c;
+        while(my $line = <FH>) {
+            $c .= $line;
+        }
+        my $encoded = encode_base64($c);
+        close(FH);
+
+        my $now = time();
+        my $insert_sql = "insert into t_download (F_image_id, F_base64, F_created_at, F_updated_at) " .
+            "values ($image_id, '$encoded', $now, $now);";
+    
+        DbUtil::execute($dbh, $insert_sql);
+    }
 }
 
 1;

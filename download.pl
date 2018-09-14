@@ -16,9 +16,12 @@ use Data::Dumper;
 
 my $dbh  = DbUtil::connectDb();
 my $query_sql = "select F_id, F_url from t_image;";
+my $image_sql = "select F_id from t_download where F_image_id=";
 
 my @rows = DbUtil::query($dbh, $query_sql);
 
 foreach $row_ref (@rows) {
-    Operation::write_db($dbh, $row_ref);
+    $sql = $image_sql . $row_ref->[0] . ";";
+    next if scalar(DbUtil::query($dbh, $query_sql)) > 0;
+    Operation::fetch_img($dbh, $row_ref);
 }

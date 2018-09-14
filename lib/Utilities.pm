@@ -27,7 +27,7 @@ sub grab_html_href {
        $html .= $line . "\n";
    }
 
-   return $html;
+   return decode('utf-8', $html);
 }
 
 # Grab page by_rand
