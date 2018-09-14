@@ -23,24 +23,30 @@ sub query {
 
    my $sth = $dbh->prepare($sql);
    my $rv = $sth->execute() or die $DBI::errstr;
+   my @rows;
 
    if($rv < 0){
       print $DBI::errstr;
    }
 
-   return $sth->fetchrow_array();
+   while(my @result = $sth->fetchrow_array()) {
+      push(@rows, $result[0]);
+   }
+   return @rows;
 }
 
 sub execute {
    my $dbh = shift;
    my $sql = shift;
 
-   my $rv = $dbh->do($sql);
+   eval {
+      my $rv = $dbh->do($sql);
+   };
 
-   if ($rv < 0) {
-      print "Failed to execute: $sql\n";
+   if ($@) {
       return 1;
    }
+
    return 0;
 }
 

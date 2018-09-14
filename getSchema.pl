@@ -13,29 +13,38 @@ use DBI;
 use MIME::Base64;
 
 my $base = "https://xxgege.net";
-#my @arts = qw/artyz artzp artkt artjq artkt artwm artmt artyd/;
+#my @arts = qw/artyz artzp 
 
 my %map = (
    "artyz" => "艳照",
    "artzp" => "自拍",
+   "artkt" => "卡通", 
+   "artjq" => "激情",
+   "artwm" => "唯美",
+   "artmt" => "美腿",
+   "artyd" => "淫荡",
 );
+
 my @arts = keys(%map);
 
 my $dbh  = DbUtil::connectDb();
-initialize_db($dbh);
+init_db($dbh);
 
 # check if t_category being initilized
-my $category_query = "select * from t_category;";
+my $category_query = "select F_name from t_category;";
 my @result = DbUtil::query($dbh, $category_query);
 
 if (scalar(@result) == 0) {
    init_category(@arts);
 }
 
+init_subject($dbh);
+exit();
+
 foreach my $art (@arts) {
    my $category_id = get_category_id($art);
    my $url         = $base . '/' . $art;
-   my $html        = Utilities::grab_html_by_sque($url, 1);
+   my $html        = Utilities::grab_html_by_sque($url . "/");
    my %info        = Utilities::parse_items($html);
 
    while (my ($link, $name) = each %info) {
@@ -47,7 +56,7 @@ foreach my $art (@arts) {
             "insert into t_subject (F_name, F_url, F_title, F_category_id, F_state, " . 
             "F_created_at, F_updated_at) values ('$subj_name', '$link', '$title', $category_id, 0, $now, $now);";
       
-      DbUtil::execute($dbh, $subj_sql);
+      next if DbUtil::execute($dbh, $subj_sql);
 
       my @links     = grab_links($base, $link);
       my $subj_id   = get_subj_id($subj_name);
@@ -66,12 +75,12 @@ foreach my $art (@arts) {
 
 DbUtil::closeDb($dbh);
 
-sub initialize_db {
+sub init_db {
    my  $dbh = shift;
    my $stmt_cate = qq /
        CREATE TABLE IF NOT EXISTS t_category (
            F_id INTEGER PRIMARY KEY AUTOINCREMENT,
-           F_name TEXT, 
+           F_name TEXT UNIQUE, 
            F_title TEXT,
            F_url TEXT, 
            F_state INT,
@@ -111,7 +120,7 @@ sub initialize_db {
    
    # Create index
    my $index_img  = "create index if not exists imgIndex on t_image(F_subject_id,F_category_id);";
-   my $index_subj = "create index if not exists subIndex on t_subject(F_category_id);";
+   my $index_subj = "create index if not exists subIndex on t_subject(F_category_id, F_name);";
    
    my $rv;
    my $flag = 1;
@@ -138,9 +147,34 @@ sub init_category {
       my $now = time();
       my $init_category_sql = 
             "insert into t_category (F_name, F_url, F_title, F_state, F_created_at, F_updated_at) ".
-            "values('$art', '/$art/', '$map{$art}', 0, $now, $now)";
+            "values('$art', '/$art/', '$map{$art}', 0, $now, $now);";
 
       DbUtil::execute($dbh, $init_category_sql);
+   }
+}
+
+sub init_subject {
+   my $dbh = shift;
+   my @arts = DbUtil::query($dbh, "select F_name from t_category;");
+
+   foreach my $art (@arts) {
+      my $category_id = get_category_id($art);
+      my $url         = $base . '/' . $art;
+      my $html        = Utilities::grab_html_by_sque($url . "/");
+      my %info        = Utilities::parse_items($html);
+
+      while (my ($link, $name) = each %info) {
+         my $subj_name = basename($link);
+         next if $link =~ /(google|baidu|\.xml)/ or get_subj_id($subj_name);
+
+         my $now       = time();
+         my $title     = decode('utf-8',$name);
+         my $subj_sql  = 
+            "insert into t_subject (F_name, F_url, F_title, F_category_id, F_state, " . 
+            "F_created_at, F_updated_at) values ('$subj_name', '$base$link', '$title', $category_id, 0, $now, $now);";
+      
+         DbUtil::execute($dbh, $subj_sql);
+      }
    }
 }
 
