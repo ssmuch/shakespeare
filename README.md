@@ -1,11 +1,13 @@
 
 # 图片采集工具
 ## initDb.pl - 数据存数据库
- 数据存储在以下表内
+conf/conf.yml文件用于配置数据库名，以及抓取页数限制，下载图片目录
+以下是数据库表结构信息：
  - t_category：目录信息
  - t_subject：帖子信息
  - t_image：图片名，url
  - t_download: 图片内容信息
+可以用extractDb.pl来解压数据内的数据，
 
 ##fectchxx.pl - 数据存yaml文件里
 本脚本主要用于抓取图片，网站, 本程序用多个线程来抓取，本地建立

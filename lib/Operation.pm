@@ -307,12 +307,12 @@ sub fetch_img {
     my $ff          = File::Fetch->new(uri => $url);
     my $retry       = 0;
     my $retry_limit = 3;
-    my $sql         = "select F_title from t_subject where F_id=$subject_id and F_enable !=2;";
+    my $sql         = "select F_title from t_subject where F_id=$subject_id and F_state=1 and F_enable !=2;";
     my @result      = DbUtil::query($dbh, $sql);
     my $to_dir;
 
     if (scalar @result > 0) {
-        $to_dir = "images/" . encode("gbk", decode('utf-8', $result[0])) . "/";
+        $to_dir = encode("gbk", decode('utf-8', $ENV{'IMAGE_DIR'} . '/' . $result[0])) . "/";
     }
     else {
         print "Skipping\n";
