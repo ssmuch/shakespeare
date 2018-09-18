@@ -7,8 +7,15 @@ sub connectDb {
    my $driver   = "SQLite"; 
 
    if (not defined $database) {
-      $database = "db/xxgege.db";
+      if (defined $ENV{'DB_NAME'}) {
+         $database = "db/". $ENV{'DB_NAME'} . ".db";
+      }
+      else {
+         $database = "db/default.db";
+      }
    }
+
+   print "$database\n";
 
    my $dsn = "DBI:$driver:dbname=$database";
    my $dbh = DBI->connect($dsn, "", "", { RaiseError => 1 }) 

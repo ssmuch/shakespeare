@@ -1,0 +1,4 @@
+---
+DB_NAME: blackbox
+PAGE_LIMIT: 1
+IMAGE_DIR:  boxes

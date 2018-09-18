@@ -16,7 +16,17 @@ sub grab_html {
 
 sub grab_html_href {
    my $url = shift;
-   my $r   = HTTP::Tiny->new->get($url);
+
+   my $r;
+
+   eval {
+        $r = HTTP::Tiny->new->get($url);
+   };
+
+   if ($@) {
+       return "";
+   }
+
    my $html;
    # Decoding the charset
    my @lines  = split(/\n/, $r->{content});
@@ -74,7 +84,7 @@ sub grab_html_by_sque {
    # Set a default limit for grabbing html
    if (not defined($limit)) {
       #$limit = 10;
-      $limit = get_last_index(grab_html_href($url));
+      $limit = get_last_index_by_href($url);
    }
 
    # Get start page
@@ -104,6 +114,13 @@ sub get_last_index {
    if ($content =~ /尾(\d+)页/ig) {
       return $1;
    }
+}
+
+sub get_last_index_by_href {
+    my $url  = shift;
+    my $html = grab_html_href($url);
+
+    return get_last_index($html);
 }
 
 # Retrieve itemm and link map for the next grab

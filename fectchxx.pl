@@ -113,7 +113,6 @@ while (my ($link, $name) = each %info) {
    }
 
    my @links = Utilities::parse_img_links($content);
-   #print Dumper \@links;
    my $ff;
    my $thr;
    my $img_file;

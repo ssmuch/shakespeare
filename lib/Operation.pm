@@ -1,24 +1,32 @@
 package Operation;
 use strict;
 use warnings;
+
 use LWP::Simple;
 use MIME::Base64;
 use Data::Dumper;
 use File::Fetch;
+use File::Basename;
+use Encode;
 
 use lib './lib';
 
 use Utilities;
 use DbUtil;
 
+use Setup;
+
 my $BASE = "https://xxgege.net";
 my %MAP = (
+   "artga" => "同性",
+   "artjq" => "激情",
+   "artkt" => "卡通", 
+   "artmt" => "美腿",
+   "artmx" => "明星",
+   "artsm" => "SM",
+   "artwm" => "唯美",
    "artyz" => "艳照",
    "artzp" => "自拍",
-   "artkt" => "卡通", 
-   "artjq" => "激情",
-   "artwm" => "唯美",
-   "artmt" => "美腿",
 );
 
 sub init_db {
@@ -31,10 +39,10 @@ sub init_db {
            F_url TEXT, 
            F_state INT DEFAULT 0,
            F_created_at INT, 
-           F_updated_at INT
-           F_enable INT DEFAULT 0,
-       );
-       /;
+           F_updated_at INT,
+           F_enable INT DEFAULT 0
+           );
+        /;
    my $stmt_subj = qq /
        CREATE TABLE IF NOT EXISTS t_subject (
            F_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,9 +90,9 @@ sub init_db {
 
    # Create index
    my $index_down = "create index if not exists dowIndex on t_download(F_image_id, F_enable);";
-   my $index_img  = "create index if not exists imgIndex on t_image(F_subject_id,F_category_id, F_enable);";
-   my $index_subj = "create index if not exists subIndex on t_subject(F_category_id, F_name, F_enable);";
-   my $index_cate = "create index if not exists catIndex on t_category(F_name, F_enable);";
+   my $index_img  = "create index if not exists imgIndex on t_image(F_subject_id,F_category_id, F_enable, F_state);";
+   my $index_subj = "create index if not exists subIndex on t_subject(F_category_id, F_name, F_enable, F_state);";
+   my $index_cate = "create index if not exists catIndex on t_category(F_name, F_enable, F_state);";
    
    my $rv;
    my $flag = 1;
@@ -101,14 +109,18 @@ sub init_db {
    }
    
    if ($flag) {
-         print "Table created successfully\n";
+         print "DB initialization completes successfully\n";
    }
 }
 
 sub init_category {
-   my $dbh      = shift;
-   my $arts_ref = shift;
-   foreach my $art (@{$arts_ref}) {
+   my $dbh  = shift;
+   my @arts  = keys %MAP;
+   foreach my $art (sort @arts) { 
+      my $sql = "select * from t_category where F_name='$art';";
+      my @results = DbUtil::query($dbh, $sql);
+      next if scalar(@results) > 0;
+
       my $now = time();
       my $init_category_sql = 
             "insert into t_category (F_name, F_url, F_title, F_state, F_created_at, F_updated_at) ".
@@ -119,15 +131,37 @@ sub init_category {
 
 sub init_subject {
    my $dbh = shift;
-   my @arts = DbUtil::query($dbh, "select F_name from t_category;");
+   my @arts = DbUtil::query($dbh, "select F_name from t_category where F_state=0;");
 
    foreach my $art (@arts) {
       my $category_id = get_category_id($dbh, $art);
-      my $url         = $BASE . '/' . $art;
-      my $html        = Utilities::grab_html_by_sque($url . "/");
-      my %info        = Utilities::parse_items($html);
+      print "reaping category: $art - $category_id\n";
+      my $url         = $BASE . '/' . $art . '/';
+      my $last_index  = Utilities::get_last_index_by_href($url);
+      my $html;
+
+      if (defined $ENV{'PAGE_LIMIT'}) {
+          $html = Utilities::grab_html_by_sque($url, $ENV{'PAGE_LIMIT'});
+      }
+      else {
+        my $split_num   = 50; 
+        my $flag        = int($last_index / $split_num);
+
+        if ($flag > 0) {
+            $html  = Utilities::grab_html_by_sque($url, $split_num);
+
+            for(my $i=1; $i <= $flag; $i++) {
+                $html .= Utilities::grab_html_by_sque($url . "index" . $i * $split_num . ".html");
+            }
+        } else {
+            $html  = Utilities::grab_html_by_sque($url);
+        }
+      }
+
+      my %info     = Utilities::parse_items($html);
 
       while (my ($link, $name) = each %info) {
+         print "reaping subject: $BASE$link\n";
          my $subj_name = basename($link);
          next if $link =~ /(google|baidu|\.xml)/ or get_subj_id($dbh, $subj_name);
 
@@ -139,18 +173,23 @@ sub init_subject {
       
          DbUtil::execute($dbh, $subj_sql);
       }
+
+      my $cate_update = "update t_category set F_state=1 where F_id=$category_id;";
+      DbUtil::execute($dbh, $cate_update);
    }
 }
 
 sub init_image {
    my $dbh = shift;
-   my @arts = DbUtil::query($dbh, "select F_id, F_category_id, F_url from t_subject;");
+   my $subj_query = "select F_id, F_category_id, F_url from t_subject where F_state !=1;";
+   my @arts = DbUtil::query($dbh, $subj_query);
 
    foreach my $subj_ref (@arts) {
        my $subj_id     = $subj_ref->[0];
        my $category_id = $subj_ref->[1];
-       my @links       = grab_links($subj_ref->[2]);
+       print "reaping image links: (subj)$subj_id - $category_id\n";
 
+       my @links       = grab_links($subj_ref->[2]);
        foreach my $link (@links) {
            my $now      = time();
            my $img_name = basename($link);
@@ -161,7 +200,23 @@ sub init_image {
 
            DbUtil::execute($dbh, $img_sql);
        }
+
+       my $subj_update = "update t_subject set F_state=1 where F_id=$subj_id;";
+       DbUtil::execute($dbh, $subj_update);
    }
+}
+
+sub init_download{
+    my $dbh       = shift;
+    my $query_sql = "select F_id, F_url, F_subject_id from t_image where F_state=0 and ".
+                    "F_subject_id not in (select F_id from t_subject where F_enable=2);";
+    my @rows      = DbUtil::query($dbh, $query_sql);
+
+    foreach my $row_ref (@rows) {
+        print "downloading: " . $row_ref->[1] ."\n";
+        fetch_img($dbh, $row_ref);
+        sleep(rand(10));
+    }
 }
 
 sub get_subj_id {
@@ -198,12 +253,15 @@ sub grab_links{
    # Looping to get all the links for the item
    if ($index > 1) {
       for(my $i=2; $i <= $index; ++$i) {
-         my $next  = $BASE . $link . "index$i" . ".html";
-         $content .= Utilities::grab_html($next);
+         my $next      = $link . "index$i" . ".html";
+         my $html_href = Utilities::grab_html_href($next);
+
+         if (defined $html_href and $html_href ne "") {
+             $content .= $html_href;
+         }
       }
    }
    
-   print "parsing links: " . $link ."\n";
    return Utilities::parse_img_links($content);
 }
 
@@ -244,11 +302,30 @@ sub fetch_img {
     my $dbh = shift;
     my $ref = shift;
     my $image_id    = $ref->[0];
-    my $ff          = File::Fetch->new(uri => $ref->[1]);
+    my $url         = $ref->[1];
+    my $subject_id  = $ref->[2];
+    my $ff          = File::Fetch->new(uri => $url);
     my $retry       = 0;
     my $retry_limit = 3;
-    my $to_dir      = "images/$image_id";
+    my $sql         = "select F_title from t_subject where F_id=$subject_id and F_enable !=2;";
+    my @result      = DbUtil::query($dbh, $sql);
+    my $to_dir;
+
+    if (scalar @result > 0) {
+        $to_dir = "images/" . encode("gbk", decode('utf-8', $result[0])) . "/";
+    }
+    else {
+        print "Skipping\n";
+        return;
+    }
+
+    if (not -e $to_dir) {
+        mkdir($to_dir);
+    }
+
     my $image_file  = $to_dir . basename($ref->[1]);
+
+    print "fetching: $url\n";
 
 FETCH:
     eval {
@@ -258,14 +335,23 @@ FETCH:
     if ($@) {
         if ($retry < $retry_limit) {
             $retry ++;
-            go FETCH;
+            goto FETCH;
         }
         else {
             print "Failed to retrieve img from: [" . $ref->[1] . "], $@\n";
+
+            $sql = " Update t_subject set F_enable=2 where F_id=$subject_id;";
+            DbUtil::execute($dbh, $sql);
         }
     }
     else {
-        open(FH, '<', $image_file) or die "Failed to open file: $image_file\n";
+        if ($retry == 3 and not -e $image_file) {
+            $sql = " Update t_subject set F_enable=2 where F_id=$subject_id;";
+            DbUtil::execute($dbh, $sql);
+        }
+        return 0 if not -e $image_file;
+
+        open(FH, '<', $image_file) or warn "Failed to open file: $image_file\n";
         binmode(FH);
 
         my $c;
@@ -278,9 +364,47 @@ FETCH:
         my $now = time();
         my $insert_sql = "insert into t_download (F_image_id, F_base64, F_created_at, F_updated_at) " .
             "values ($image_id, '$encoded', $now, $now);";
+        my $update_sql = "update t_image set F_state=1 where F_id=$image_id;";
     
         DbUtil::execute($dbh, $insert_sql);
+        DbUtil::execute($dbh, $update_sql);
     }
+}
+
+sub restore {
+    my $dbh = shift;
+
+    my $sql = "select t_image.f_name, t_subject.f_title, t_download.f_base64 from t_download left join " .
+          "t_image on t_download.f_image_id = t_image.f_id left join t_subject on t_image.f_subject_id ".
+          "= t_subject.f_id;";
+
+    my @rows = DbUtil::query($dbh, $sql);
+
+    my $image_dir = defined $ENV{'IMAGE_DIR'} ? encode('gbk', decode('utf-8', $ENV{'IMAGE_DIR'})) : "images/";
+    mkdir($image_dir) if not -e $image_dir;
+
+    foreach my $row_ref (@rows) {
+        my $dir  = $image_dir . "/" . encode('gbk', decode('utf-8', $row_ref->[1]));
+        my $file = $dir . "/" . $row_ref->[0];
+
+        if (not -e $dir) {
+            mkdir($dir);
+        }
+
+        write_file($file, $row_ref->[2]);
+    }
+}
+
+sub write_file {
+    my $file    = shift;
+    my $encoded = shift;
+
+    my $content = decode_base64($encoded);
+
+    open(OUT, '>', $file);
+    binmode(OUT);
+    print OUT $content;
+    close OUT;
 }
 
 1;
