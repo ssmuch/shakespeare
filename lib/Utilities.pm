@@ -1,5 +1,8 @@
 package Utilities;
 
+use strict;
+use warnings;
+
 use Digest::MD5;
 use Encode;
 use File::Basename;
@@ -171,9 +174,10 @@ sub get_md5_by_name {
 sub get_md5_by_file {
    my $img = shift;
    my $ctx = Digest::MD5->new();
-   open(FH, '<', $img) or warn "Failed to open $img, $!\n";
-   $ctx->addfile(FH);
-   close FH;
+   my $file_handle;
+   open($file_handle, '<', $img) or warn "Failed to open $img, $!\n";
+   $ctx->addfile($file_handle);
+   close $file_handle;
 
    return $ctx->hexdigest;
 }
