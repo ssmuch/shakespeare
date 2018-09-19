@@ -1,4 +1,4 @@
 ---
-DB_NAME: blackbox
+DB_NAME: samplebox
 PAGE_LIMIT: 1
-IMAGE_DIR:  boxes
+IMAGE_DIR: images

@@ -15,11 +15,11 @@ sub connectDb {
       }
    }
 
-   print "$database\n";
-
    my $dsn = "DBI:$driver:dbname=$database";
    my $dbh = DBI->connect($dsn, "", "", { RaiseError => 1 }) 
       or die $DBI::errstr;
+
+   print "Using $database\n";
 
    return $dbh;
 }
