@@ -107,7 +107,7 @@ sub init_db {
 sub init_category {
    my $dbh  = shift;
    my @arts  = keys %MAP;
-   foreach my $art (sort @arts) { 
+   foreach my $art (reverse sort @arts) { 
       my $sql = "select * from t_category where F_name='$art';";
       my @results = DbUtil::query($dbh, $sql);
       next if scalar(@results) > 0;
@@ -180,7 +180,7 @@ sub init_image {
    foreach my $subj_ref (@results) {
        my $subj_id     = $subj_ref->[0];
        my $category_id = $subj_ref->[1];
-       print "reaping image links: (subj)$subj_id - $category_id\n";
+       print "reaping image links: (subj_id: $subj_id) - (category_id: $category_id)\n";
 
        my @links       = grab_links($subj_ref->[2]);
        my $image_count = 0;
@@ -196,13 +196,18 @@ sub init_image {
            ++ $image_count;
        }
 
-       $subj_query     = "select f_id from t_image where F_subject_id=$subj_id order by f_id desc limit 1;";
-       @results        = DbUtil::query($dbh, $subj_query);
+       $subj_query = "select f_id from t_image where F_subject_id=$subj_id order by f_id desc limit 1;";
+       my @result  = DbUtil::query($dbh, $subj_query);
+       my $subj_update;
 
-       my $image_id = $results[0];
-
-       my $subj_update = "update t_subject set F_state=1, F_thumb_image_id=$image_id, " .
+       if (scalar(@result) > 0) {
+            my $image_id = $result[0];
+            $subj_update = "update t_subject set F_state=1, F_thumb_image_id=$image_id, " .
                          "F_image_count=$image_count where F_id=$subj_id;";
+       }
+       else {
+            $subj_update = "update t_subject set F_state=1, F_enable=2 where F_id=$subj_id;";
+       }
        DbUtil::execute($dbh, $subj_update);
    }
 }

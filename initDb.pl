@@ -16,7 +16,6 @@ Operation::init_db($dbh);
 print "Init t_category table starts\n";
 Operation::init_category($dbh);
 
-=ss
 print "Init t_subject table starts\n";
 Operation::init_subject($dbh);
 
@@ -26,5 +25,4 @@ Operation::init_image($dbh);
 print "Init t_download table starts\n";
 Operation::init_download($dbh);
 
-=cut
 DbUtil::closeDb($dbh);
