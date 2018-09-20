@@ -207,7 +207,7 @@ sub init_image {
    }
 }
 
-sub init_download{
+sub init_download {
     my $dbh       = shift;
     my $query_sql = "select F_id, F_url, F_subject_id from t_image where F_state=0 and ".
                     "F_subject_id not in (select F_id from t_subject where F_enable=2);";
