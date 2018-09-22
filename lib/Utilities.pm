@@ -114,8 +114,11 @@ sub grab_html_by_sque {
 
 sub get_last_index {
    my $content = shift;
-   if ($content =~ /尾(\d+)页/ig) {
+   if (defined $content and $content =~ /尾(\d+)页/ig) {
       return $1;
+   }
+   else {
+       return 0;
    }
 }
 
@@ -151,6 +154,7 @@ sub parse_img_links {
    my $html = shift;
    my @links;
 
+   return if not defined $html;
    # Split the img links for download
    @links = split(/src="/, encode('gbk', $html));
 

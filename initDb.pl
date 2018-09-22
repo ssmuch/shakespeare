@@ -12,17 +12,18 @@ Setup::export_env();
 my $dbh  = DbUtil::connectDb();
 
 Operation::init_db($dbh);
+print "Init tables schema completes\n";
 
-print "Init t_category table starts\n";
 Operation::init_category($dbh);
+print "Init t_category table data compeletes\n";
 
-print "Init t_subject table starts\n";
 Operation::init_subject($dbh);
+print "Init t_subject table data completes\n";
 
-print "Init t_image table starts\n";
 Operation::init_image($dbh);
+print "Init t_image table data completes\n";
 
-print "Init t_download table starts\n";
 Operation::init_download($dbh);
+print "Init t_image table content completes\n";
 
 DbUtil::closeDb($dbh);

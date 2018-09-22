@@ -7,7 +7,9 @@ use MIME::Base64;
 use Data::Dumper;
 use File::Fetch;
 use File::Basename;
+use File::Path;
 use Encode;
+use threads;
 
 use lib './lib';
 
@@ -209,13 +211,31 @@ sub init_image {
             $subj_update = "update t_subject set F_state=1, F_enable=2 where F_id=$subj_id;";
        }
        DbUtil::execute($dbh, $subj_update);
+
+#       async {
+#           # Don't be that greedy
+#           sleep(int rand(100));
+#           my $dbh = DbUtil::connectDb();
+#           init_download($dbh, $subj_id);
+#           DbUtil::closeDb($dbh);
+#       }
    }
 }
 
 sub init_download {
-    my $dbh       = shift;
-    my $query_sql = "select F_id, F_url, F_subject_id from t_image where F_state=0 and ".
-                    "F_subject_id not in (select F_id from t_subject where F_enable=2);";
+    my $dbh        = shift;
+    my $subject_id = shift;
+
+    my $query_sql   = "select F_id, F_url, F_subject_id from t_image where F_state=0 and ";
+
+    if (defined $subject_id) {
+        $query_sql .=  "F_subject_id=$subject_id;";
+    }
+    else {
+        $query_sql .=  "F_subject_id not in (select F_id from t_subject where F_enable=2);";
+
+    }
+
     my @rows      = DbUtil::query($dbh, $query_sql);
 
     foreach my $row_ref (@rows) {
@@ -234,21 +254,24 @@ sub fetch_img {
     my $ff          = File::Fetch->new(uri => $url);
     my $retry       = 0;
     my $retry_limit = 3;
-    my $sql         = "select F_title from t_subject where F_id=$subject_id and F_state=1 and F_enable !=2;";
-    my @result      = DbUtil::query($dbh, $sql);
+    my $sql         = "select t_subject.f_title, t_category.f_title from t_subject " . 
+                      "left join t_category on t_subject.f_category_id=t_category.f_id " .
+                      "where t_subject.f_id=$subject_id and t_subject.F_state=1 and " .
+                      "t_subject.F_enable !=2;";
+    my @result  = DbUtil::query($dbh, $sql);
     my $to_dir;
 
     if (scalar @result > 0) {
-        $to_dir = encode("gbk", decode('utf-8', $ENV{'IMAGE_DIR'} . '/' . $result[0])) . "/";
+        $to_dir = encode("gbk", decode('utf-8', $ENV{'IMAGE_DIR'} . '/' . 
+                                                $result[0][1] . "/" .
+                                                $result[0][0])) . "/";
     }
     else {
         print "Skipping\n";
         return;
     }
 
-    if (not -e $to_dir) {
-        mkdir($to_dir);
-    }
+    mkpath($to_dir) if (not -e $to_dir);
 
     my $image_file  = $to_dir . basename($ref->[1]);
 
@@ -382,9 +405,14 @@ sub write_disk {
 sub restore {
     my $dbh = shift;
 
-    my $sql = "select t_image.f_name, t_subject.f_title, t_image.f_base64 from t_image " .
-              "left join t_subject on t_image.f_subject_id=t_subject.f_id;";
+    my $sql = "select t_image.f_name, t_subject.f_title, t_image.f_base64, t_category.f_title from t_image " .
+              "left join t_subject on t_image.f_subject_id=t_subject.f_id " .
+              "left join t_category on t_image.f_category_id=t_category.f_id " .
+              "where f_base64 is not null;";
 
+#    my $sql = "select t_image.f_name, t_subject.f_title, t_download.f_base64 from t_download " .
+#              "left join t_image on t_download.f_image_id=t_image.f_id " .
+#              "left join t_subject on t_image.f_subject_id=t_subject.f_id;";
     my @rows = DbUtil::query($dbh, $sql);
 
     if (scalar(@rows) == 0) {
@@ -396,7 +424,9 @@ sub restore {
     mkdir($image_dir) if not -e $image_dir;
 
     foreach my $row_ref (@rows) {
-        my $dir  = $image_dir . "/" . encode('gbk', decode('utf-8', $row_ref->[1]));
+        my $dir  = $image_dir . "/" . encode('gbk', decode('utf-8', $row_ref->[3] . "/" . $row_ref->[1]));
+        mkpath($dir) if not -e $dir;
+
         my $file = $dir . "/" . $row_ref->[0];
 
         if (not -e $dir) {
